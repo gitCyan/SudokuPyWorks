@@ -88,7 +88,6 @@ class sudoku():
         self.RandMatrix = self.MATRIX
         self.HintMatrix = self.MATRIX
         self.CurrMatrix = [['*' for i in range(self.MatrixSize)] for i in range(self.MatrixSize)]
-        #print(self.CurrMatrix[0][0])
         self.RandPool = []
         self.RandHintPool = []
         self.RowList = [[] for i in range(9)]
@@ -97,50 +96,12 @@ class sudoku():
         self.HintList = []
         self.HintMatrixList = [[[] for i in range(9)] for j in range(9)]
         self.HintMatrixListPre = self.HintMatrixList
-        #self.HintMatrixListPre = [[[] for i in range(9)] for j in range(9)]
         self.RowMinList = [[] for i in range(9)]
         self.ColMinList = [[] for i in range(9)]
         self.CubMinList = [[[] for i in range(3)] for i in range(3)]
         self.RowMaxList=[]
         self.ColMaxList=[]
         self.CubMaxList=[]
-        self.ValInputList=[]
-        self.LocInputList=[]
-
-    #utils function: get input value
-    def GetInputVal(self, valname, minrange, maxrange):
-        '''get input value
-           @return: input value
-           @type: int
-        '''
-        sys.stdout.write('>>>>>>>>>> %s = '%valname)
-        inputVal = input()
-        illegal_type = (self.InputIllegalChk(inputVal, minrange, maxrange))
-        while illegal_type != 0 : #0: no illegal find. others: illegal input.
-            print('Wrong %s!(please enter number within %d-%d)'%(valname, minrange, maxrange))
-            if dbg_on == 1:
-                print("illegal type is: %d(1, null input; 2, not numbers; 3, numbers out of range)"%int(illegal_type))
-            sys.stdout.write('>>>>>>>>>> %s = '%valname)
-            inputVal = input()
-            illegal_type = (self.InputIllegalChk(inputVal, minrange, maxrange))
-        return(int(inputVal))
-
-    #utils function: check if input value is illegal or not
-    def InputIllegalChk(self, strVal, minrange, maxrange):
-        #illegal 1: null input
-        if strVal == "":
-            return 1
-        #illegal 2: input not numbers
-        nums = string.digits
-        for i in strVal:
-            if i not in nums:
-                return 2
-        #illegal 3: input out of specified range
-        if int(strVal) not in range(minrange, (maxrange+1)):
-            return 3
-        #all check pass
-        return 0
-
 
     #Step1, initialize a Sudoku
     def iniMatrix(self):
@@ -330,13 +291,7 @@ class sudoku():
                             self.CubMaxList.extend(self.HintMatrixList[int(i/3)*3+int(k/3)][int(j/3)*3+int(k%3)])#list(set(self.CubRoughList) + set(self.HintMatrixList[int(i/3)*3+int(k/3)][int(j/3)*3+int(k%3)]))
 
                     for k in self.CUBIC:
-                        if k not in self.RowMaxList:
-                            self.HintMatrixList[i][j] = []
-                            self.HintMatrixList[i][j].append(k)
-                        elif k not in self.ColMaxList:
-                            self.HintMatrixList[i][j] = []
-                            self.HintMatrixList[i][j].append(k)
-                        elif k not in self.CubMaxList:
+                        if k not in self.RowMaxList or k not in self.ColMaxList or k not in self.CubMaxList:
                             self.HintMatrixList[i][j] = []
                             self.HintMatrixList[i][j].append(k)
 
@@ -363,29 +318,6 @@ class sudoku():
                     return 1
 
         return 0
-
-
-    def procMatrix(self):
-        self.MatrixDisplay(1)
-        self.Score=self.HintNum
-
-        for i in range(9):
-            for j in range(9):
-                if (i*9+j) in self.LocInputList:
-                    if self.ValInputList[self.LocInputList.index((i*9+j))]==0:
-                        self.CurrMatrix[i][j] = '*'
-                    else:
-                        self.CurrMatrix[i][j] = str(self.ValInputList[self.LocInputList.index((i*9+j))])
-
-        for i in range(9):
-            for j in range(9):
-                if (i*9+j) in self.LocInputList:
-                    if int(self.CurrMatrix[i][j]) == int(self.RandMatrix[i][j]):
-                        self.Score=self.Score+1
-
-        if (self.Score==81):
-            self.Done=1
-            self.MatrixDisplay(2)
 
 
 class Box:
@@ -506,9 +438,6 @@ def draw_title(ttype):
                 screen.blit(title_dict[i]['ttext'],title_dict[title_dict[i]['varsnum']]['tpos'])
 
     screen.blit(write("Use LEFT, RIGHT, UP, DOWN", height=16, color=GRAY), (left_of_screen, screen_height - bottom_of_screen))
-
-def draw_timer():
-    pass
 
 def init_board(sdk):
     sdk.iniMatrix()
