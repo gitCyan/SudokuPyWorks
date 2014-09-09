@@ -388,69 +388,6 @@ class sudoku():
             self.MatrixDisplay(2)
 
 
-    def MatrixDisplay(self, num):
-        if num == 0: #game initial pre
-            print(">>>>>>>>>> Start Now!")
-            print(">>>>>>>>>> Choose Game Level, 0 for easy, 1 for average, 2 for hard")
-            self.level=self.GetInputVal('level', 0, 2)
-        elif num == 1: #game initial post
-            print(">>>>>>>>>> Sudoku  Begin <<<<<<<<<<")
-            print("     1  2  3   4  5  6   7  8  9")
-            print("   -------------------------------")
-            for i in range(9):
-                sys.stdout.write(' %d |'%(i+1))
-                for j in range(9):
-                    sys.stdout.write(' %s '%self.CurrMatrix[i][j])
-                    if (int(j%3)==2):
-                        sys.stdout.write('|')
-                sys.stdout.write('\n')
-                if(int(i%3)==2):
-                    print("   -------------------------------")
-            print(">>>>>>>>>> Sudoku    End <<<<<<<<<<")
-            print(">>>>>>>>>> current score is %d"%self.Score)
-            print(">>>>>>>>>> Choose input location:")
-            get_input_ing=1
-            while(get_input_ing):
-                tmp1=self.GetInputVal('ROW',1,9)-1
-                tmp2=self.GetInputVal('COLUMN',1,9)-1
-                if(tmp1*9+tmp2) in self.HintList:
-                    get_input_ing=1
-                    print(">>>>>>>>>> Wrong location! Crash on the Hint number. Please enter again.")
-                else:
-                    tmp3=self.GetInputVal('number',0,9)
-                    if (tmp1*9+tmp2) not in self.LocInputList:
-                        get_input_ing=0
-                        self.LocInputList.append((tmp1*9+tmp2))
-                        self.ValInputList.append(tmp3)
-                    else:
-                        if self.ValInputList[self.LocInputList.index((tmp1*9+tmp2))]==tmp3:
-                            get_input_ing=1
-                            print(">>>>>>>>>> Input same value as before. Please enter again.")
-                        else:
-                            get_input_ing=0
-                            self.ValInputList[self.LocInputList.index((tmp1*9+tmp2))]=tmp3
-        elif num == 2: #done!
-            print(">>>>>>>>>> Game Win!")
-            print(">>>>>>>>>> Sudoku  Begin <<<<<<<<<<")
-            print("     1  2  3   4  5  6   7  8  9")
-            print("   -------------------------------")
-            for i in range(9):
-                sys.stdout.write(' %d |'%(i+1))
-                for j in range(9):
-                    sys.stdout.write(' %s '%self.CurrMatrix[i][j])
-                    if (int(j%3)==2):
-                        sys.stdout.write('|')
-                sys.stdout.write('\n')
-                if(int(i%3)==2):
-                    print("   -------------------------------")
-            print(">>>>>>>>>> Sudoku    End <<<<<<<<<<")
-
-
-    def play(self):
-        self.iniMatrix()
-        while(self.Done == 0):
-            self.procMatrix()
-
 class Box:
     def __init__(self, topleft, text, color, textcolor, ind):
         self.topleft = topleft
@@ -477,13 +414,6 @@ class Box:
 
 def draw_box(sdk):
     global board
-    # colors = {0:GRAY, 2:(239, 233, 182), 4:(239, 228, 151), 8:(243, 212, 77), 16:(239, 206, 25),
-    #           32:(242, 157, 12), 64:(214, 214, 42), 128:(239, 207, 108), 256:(239, 207, 99),
-    #           512:(239, 203, 82), 1024:(239, 199, 57), 2048:(239, 195, 41), 4096:(255, 60, 57)}
-    colors = {0:(192, 192, 192), 2:(176, 224, 230), 4:(127, 255, 212), 8:(135, 206, 235), 16:(64, 224, 208),
-              32:(0, 255, 255), 64:(0, 201, 87), 128:(50, 205, 50), 256:(34, 139, 34),
-              512:(0, 255, 127), 1024:(61, 145, 64), 2048:(48, 128, 20), 4096:(65, 105, 255),
-              8192:(8, 46, 84), 16384:(11, 23, 70), 32768:(25, 25, 112), 65536:(0, 0, 255)}
     x, y = left_of_screen, top_of_screen
     size = box_size * 9 + box_gap * 6 + box_gap2 * 4
     pygame.draw.rect(screen, BLACK, (x, y, size, size))
@@ -496,7 +426,7 @@ def draw_box(sdk):
             text=str(idx)
             textcolor=BLACK
             '''
-            idx = board[i][j]            
+            idx = board[i][j]
             if idx == 0:
                 ind=0
                 text = ""
@@ -544,7 +474,6 @@ def draw_box(sdk):
 
 def draw_title(ttype):
     global timer
-    #title_dict = {0:{'ttype':'text', 'tname':'SUDOKU', 'theight':40, 'tcolor': GOLD,        'tpos':(left_of_screen, left_of_screen//2)},
     title_dict = {0:{'ttype':'text', 'tname':'SUDOKU', 'theight':40, 'tcolor': (81,205,71),        'tpos':(left_of_screen, left_of_screen//2+15)},
                   1:{'ttype':'text', 'tname':'START',  'theight':14, 'tcolor': FORESTGREEN, 'tpos':(left_of_screen+205, left_of_screen//2+5)},
                   2:{'ttype':'text', 'tname':'DONE',   'theight':14, 'tcolor': FORESTGREEN, 'tpos':(left_of_screen+275, left_of_screen//2+5)},
@@ -552,32 +481,32 @@ def draw_title(ttype):
                   4:{'ttype':'vars', 'tname':timer,    'theight':14, 'tcolor': GOLD,        'tpos':(), 'tcenter':()},
                   5:{'ttype':'circ', 'tarea':(),       'ttext':'',   'tcolor': RED,         'tpos':(left_of_screen+200, left_of_screen//2 + 35, 60, 30), 'tcenter':(left_of_screen+230, left_of_screen//2 + 50), 'tround':15},
                   6:{'ttype':'circ', 'tarea':(),       'ttext':'',   'tcolor': GRAY,        'tpos':(left_of_screen+265, left_of_screen//2 + 35, 60, 30), 'tcenter':(left_of_screen+295, left_of_screen//2 + 50), 'tround':15},
-                  7:{'ttype':'rect', 'varsnum':4, 'tarea':(), 'ttext':'', 'tcolor': FORESTGREEN, 'tpos':(left_of_screen+340, left_of_screen//2 + 35, 80, 30), 'tcenter':(left_of_screen+380, left_of_screen//2 + 50), 'tround':15}}    
-        
+                  7:{'ttype':'rect', 'varsnum':4, 'tarea':(), 'ttext':'', 'tcolor': FORESTGREEN, 'tpos':(left_of_screen+340, left_of_screen//2 + 35, 80, 30), 'tcenter':(left_of_screen+380, left_of_screen//2 + 50), 'tround':15}}
+
     for i in range(8):
         if ttype==1:#timer
             if i== 7:
                 title_dict[i]['tarea'] = pygame.draw.rect(screen, title_dict[i]['tcolor'], title_dict[i]['tpos'])
                 title_dict[i]['ttext'] = write(title_dict[title_dict[i]['varsnum']]['tname'], height=title_dict[title_dict[i]['varsnum']]['theight'], color=title_dict[title_dict[i]['varsnum']]['tcolor'])
                 title_dict[title_dict[i]['varsnum']]['tpos'] = title_dict[i]['ttext'].get_rect()
-                title_dict[title_dict[i]['varsnum']]['tpos'].center = title_dict[i]['tcenter']     
+                title_dict[title_dict[i]['varsnum']]['tpos'].center = title_dict[i]['tcenter']
                 screen.blit(title_dict[i]['ttext'],title_dict[title_dict[i]['varsnum']]['tpos'])
         else:#ttype==0, draw all title
-        
+
             if title_dict[i]['ttype']=='text':
                 screen.blit(write(title_dict[i]['tname'], height=title_dict[i]['theight'], color=title_dict[i]['tcolor']), title_dict[i]['tpos'])
             elif title_dict[i]['ttype']=='circ':
                 title_dict[i]['tarea'] = pygame.draw.circle(screen, title_dict[i]['tcolor'], title_dict[i]['tcenter'], title_dict[i]['tround'])
                 #screen.blit()
-            elif title_dict[i]['ttype']=='rect':            
+            elif title_dict[i]['ttype']=='rect':
                 title_dict[i]['tarea'] = pygame.draw.rect(screen, title_dict[i]['tcolor'], title_dict[i]['tpos'])
                 title_dict[i]['ttext'] = write(title_dict[title_dict[i]['varsnum']]['tname'], height=title_dict[title_dict[i]['varsnum']]['theight'], color=title_dict[title_dict[i]['varsnum']]['tcolor'])
                 title_dict[title_dict[i]['varsnum']]['tpos'] = title_dict[i]['ttext'].get_rect()
-                title_dict[title_dict[i]['varsnum']]['tpos'].center = title_dict[i]['tcenter']     
+                title_dict[title_dict[i]['varsnum']]['tpos'].center = title_dict[i]['tcenter']
                 screen.blit(title_dict[i]['ttext'],title_dict[title_dict[i]['varsnum']]['tpos'])
-            
+
     screen.blit(write("Use LEFT, RIGHT, UP, DOWN", height=16, color=GRAY), (left_of_screen, screen_height - bottom_of_screen))
-    
+
 def draw_timer():
     pass
 
@@ -604,7 +533,7 @@ def move(value):
     y_loc=y_loc%9
     check_mode=check_mode%2
     print('MOVE AFTER,x_loc is %d-----y_loc is %d'%(x_loc, y_loc))
-    
+
 def update_value(value):
     global board
     if value==board[y_loc][x_loc]:
@@ -645,7 +574,7 @@ def write(msg="pygame is cool", color= BLACK, height = 14):
 def is_over(sdk):
     global score,best
     '''if board != final matrix
-    '''                
+    '''
     for i in range(9):
         for j in range(9):
             if board[i][j] != sdk.RandMatrix[i][j]:
@@ -680,7 +609,7 @@ def main(sdk):
     global score
     global run
     global timer
-    
+
     one_ms_cnt=0
     one_sec_cnt=0
     one_min_cnt=0
@@ -690,7 +619,7 @@ def main(sdk):
     screen.blit(background, (0, 0))
     init_board(sdk)
     gameover = is_over(sdk)
-    
+
     curr_board = deepcopy(board)
     curr_timer = deepcopy(timer)
     curr_status =(x_loc, y_loc, check_mode)
@@ -698,27 +627,27 @@ def main(sdk):
     draw_box(sdk)
     draw_title(0)
     #timer_add()
-    
+
     while True:
-        
+
         if one_ms_cnt<999:
             one_ms_cnt+=1
         else:
             one_ms_cnt=0
-            
+
         if one_sec_cnt<59:
             if one_ms_cnt==999:
                 one_sec_cnt+=1
                 #print('second add %d'%one_sec_cnt)
         else:
             one_sec_cnt=0
-            
+
         if one_min_cnt<59:
             if one_sec_cnt==59 and one_ms_cnt==999:
                 one_min_cnt+=1
         else:
             one_min_cnt=0
-            
+
         if one_hour_cnt<59:
             if one_min_cnt==59 and one_sec_cnt==59 and one_ms_cnt==999:
                 one_hour_cnt+=1
@@ -726,13 +655,13 @@ def main(sdk):
             #one_hour_cnt=0
             print("time up! game over!")
             gameover=1
-            
+
         timer='%02d:%02d:%02d'%(one_hour_cnt,one_min_cnt,one_sec_cnt)
-            
+
         if curr_timer != timer:
             draw_title(1)
             curr_timer=deepcopy(timer)
-        
+
         for event in pygame.event.get():
             if event.type == QUIT or (event.type == KEYUP and event.key == K_ESCAPE):
                 write_best(best)
@@ -772,7 +701,7 @@ def main(sdk):
                 gameover = is_over(sdk)
             else:
                 write_best(best)
-                
+
                 screen.blit(write("Game Win!", height = 40, color = FORESTGREEN), (left_of_screen, screen_height // 2))
                 screen.blit(write("Press C to Continue,", height = 40, color = FORESTGREEN), (left_of_screen, screen_height // 2+40))
                 screen.blit(write("          Q to Quit.", height = 40, color = FORESTGREEN), (left_of_screen, screen_height // 2+80))
@@ -781,8 +710,6 @@ def main(sdk):
                     run=1
                     gameover=0
                     return 1
-
-
         pygame.display.update()
 
 if __name__ == "__main__":
@@ -793,4 +720,3 @@ if __name__ == "__main__":
         if continue_run==1:
              screen.blit(write("Loading ...", height = 40, color = FORESTGREEN), (left_of_screen, screen_height // 2+120))
              pygame.display.update()
-        #if run==1:
