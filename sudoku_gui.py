@@ -7,10 +7,10 @@ from pygame.locals import *
 import pygame._view #to solve cx_freeze exceptions.
 import sys
 import string
+import time
 
 '''global parameter define
 '''
-dbg_on = 1
 timer='00:00:00'
 run=0
 board = [[0 for i in range(9)] for i in range(9)]
@@ -64,19 +64,16 @@ DARKORANGE2 = pygame.color.THECOLORS["darkorange2"]
 FORESTGREEN = pygame.color.THECOLORS['forestgreen']
 
 class sudoku():
-    global dbg_on
     '''Sudoku main
     '''
     #init function
-    def __init__(self,dbg_on):
+    def __init__(self):
         '''parameter initial
         '''
         self.level = 0 #level: 2-hard:24, 1-middle:32, 0-easy:40
         self.MatrixSize = 9
         self.HintNumList = [40, 35, 30]
         self.HintNum = self.HintNumList[self.level]
-        if dbg_on ==1:
-            print(self.HintNum)
         self.MatrixNum = self.MatrixSize * self.MatrixSize
         self.Done = 0 #sudoku finish flag
         self.Score = 0 #sudoku correct number
@@ -95,13 +92,14 @@ class sudoku():
         self.CubList = [[[] for i in range(3)] for i in range(3)]
         self.HintList = []
         self.HintMatrixList = [[[] for i in range(9)] for j in range(9)]
-        self.HintMatrixListPre = self.HintMatrixList
-        self.RowMinList = [[] for i in range(9)]
-        self.ColMinList = [[] for i in range(9)]
-        self.CubMinList = [[[] for i in range(3)] for i in range(3)]
-        self.RowMaxList=[]
-        self.ColMaxList=[]
-        self.CubMaxList=[]
+        self.HintMatrixListPre = deepcopy(self.HintMatrixList)
+        self.HintMatrixListOr = deepcopy(self.HintMatrixList)
+        self.RowMinList = deepcopy(self.RowList)#[[] for i in range(9)]
+        self.ColMinList = deepcopy(self.ColList)#[[] for i in range(9)]
+        self.CubMinList = deepcopy(self.CubList)#[[[] for i in range(3)] for i in range(3)]
+        self.RowMaxList = []
+        self.ColMaxList = []
+        self.CubMaxList = []
 
     #Step1, initialize a Sudoku
     def iniMatrix(self):
@@ -115,8 +113,6 @@ class sudoku():
         #print(self.level)
         self.HintNum = self.HintNumList[self.level]
         self.Score = self.HintNum #sudoku correct number
-        if dbg_on ==1:
-            print(self.HintNum)
 
         #generate final matrix
         self.MatrixGen()
@@ -127,16 +123,15 @@ class sudoku():
         #generate curr matrix
         for i in range(9):
             for j in range(9):
-                if self.HintMatrix[i][j] != 0:
+                if self.HintMatrix[i][j]:
                     self.CurrMatrix[i][j] = str(self.HintMatrix[i][j])
 
 
     def MatrixGen(self):
-        retry_cnt=0
-        while(self.MatrixRandGen() != 1):
-            retry_cnt=retry_cnt+1
-            pass
-        print('>>>>>>>>>> matrix gen retry cnt is %d'%retry_cnt)
+        try_cnt = 1
+        while not self.MatrixRandGen():
+            try_cnt += 1
+        print('>>>>>>>>>> matrix gen try cnt is %d'%try_cnt)
 
     def MatrixRandGen(self):
         '''random generate a MATRIX
@@ -154,40 +149,28 @@ class sudoku():
 
         for i in range(9): #ROW i
             for j in range(9): #COLUMN j
-                self.RandPool = self.CUBIC
-                if dbg_on == 2:
-                    print('i=%d, j=%d'%(i,j))
+                self.RandPool = list(set(self.CUBIC) - set(self.ColList[j]) - set(self.RowList[i]) - set(self.CubList[int(i/3)][int(j/3)]))
 
-                self.RandPool = list(set(self.RandPool) - set(self.ColList[j]) - set(self.RowList[i]) - set(self.CubList[int(i/3)][int(j/3)]))
-
-                if dbg_on == 2:
-                    print(self.RandPool)
-                if self.RandPool != []:
+                if self.RandPool:
                     self.RandMatrix[i][j] = random.choice(self.RandPool) #random select 1 in pool
                 else:
-                    if dbg_on == 2:
-                        print("Gen fail! return 1!")
                     return 0 #Gen fail
 
                 self.RowList[i].append(self.RandMatrix[i][j])
                 self.ColList[j].append(self.RandMatrix[i][j])
                 self.CubList[int(i/3)][int(j/3)].append(self.RandMatrix[i][j])
 
-        if dbg_on == 1:
-            print(self.RandMatrix)
-            print("Gen OK! return 0!")
         return 1 #Gen OK
 
 
     def HintGen(self):
-
-        try_cnt=0
-        self.RandHintGen()
-        try_cnt=try_cnt+1
-        while(self.MatrixNotSingle()):
+        retry = 1
+        trycnt = 0
+        while retry:
             self.RandHintGen()
-            try_cnt=try_cnt+1
-        print(">>>>>>>>>> hint_gen try cnt is %d"%try_cnt)
+            retry = self.MatrixNotSingle()
+            trycnt += 1
+        print(">>>>>>>>>> hint_gen try cnt is %d"%trycnt)
 
 
     def RandHintGen(self):
@@ -202,19 +185,11 @@ class sudoku():
             hint = random.choice(self.RandHintPool)
             self.HintList.append(hint)
 
-        if dbg_on == 2:
-            print(self.HintList)
-            print(self.RandHintPool)
-
+        self.HintMatrix = deepcopy(self.RandMatrix)
         for i in range(9):
             for j in range(9):
-                if self.HintList.count(i*9+j)>0:
-                    self.HintMatrix[i][j] = self.RandMatrix[i][j]
-                else:
+                if  (i*9+j) not in self.HintList:
                     self.HintMatrix[i][j] = 0
-
-        if dbg_on == 1:
-            print(self.HintMatrix)
 
 
     #here need a submodule for hint matrix check, to confirm that it still have single result.
@@ -223,58 +198,40 @@ class sudoku():
             for j in range(9):
                 self.HintMatrixList[i][j].append(self.RandMatrix[i][j])'''
 
-        self.RowMinList = [[] for i in range(9)]
-        self.ColMinList = [[] for i in range(9)]
-        self.CubMinList = [[[] for i in range(3)] for i in range(3)]
-        self.HintMatrixList = [[[] for i in range(9)] for j in range(9)]
-        self.HintMatrixListPre = [[[] for i in range(9)] for j in range(9)]
-
-        if dbg_on == 2:
-            print(">>>>>>>>>> 0000000000 print length now!")
-            for i in range(9):
-                sys.stdout.write("|")
-                for j in range(9):
-                    sys.stdout.write(" %d "%(len(self.HintMatrixList[i][j])))
-                sys.stdout.write("|\n")
+        self.HintMatrixList = [[self.CUBIC for i in range(9)] for j in range(9)]
 
         for i in range(9):
             for j in range(9):
                 if (i*9+j) in self.HintList:
-                    self.HintMatrixList[i][j].append(self.RandMatrix[i][j])
-                else:
-                    self.HintMatrixList[i][j] = self.CUBIC
+                    self.HintMatrixList[i][j] = [self.RandMatrix[i][j]]
 
-        if dbg_on == 2:
-            print(">>>>>>>>>> 1111111111 print length now!")
-            for i in range(9):
-                sys.stdout.write("|")
-                for j in range(9):
-                    sys.stdout.write(" %d "%(len(self.HintMatrixList[i][j])))
-                sys.stdout.write("|\n")
 
-        reloop = 1
-        while(reloop):
-            reloop = 0
-            #self.HintMatrixListPre = self.HintMatrixList
+        #iteration solve this problem
+        nextloop = 1
+        while nextloop:
+            nextloop = 0
+            self.HintMatrixListPre = deepcopy(self.HintMatrixList)
+
+            self.RowMinList = [[] for i in range(9)]
+            self.ColMinList = [[] for i in range(9)]
+            self.CubMinList = [[[] for i in range(3)] for i in range(3)]
+
+            #fill already known numbers into Row/Col/Cub Min list
             for i in range(9):
                 for j in range(9):
-                    self.HintMatrixListPre[i][j] = self.HintMatrixList[i][j]
+                    if len(self.HintMatrixList[i][j]) == 1:
+                        self.RowMinList[i].extend(self.HintMatrixList[i][j])
+                        self.ColMinList[j].extend(self.HintMatrixList[i][j])
+                        self.CubMinList[int(i/3)][int(j/3)].extend(self.HintMatrixList[i][j])
 
-            if dbg_on == 2:
-                print(self.HintMatrixListPre)
-                print(self.HintMatrixList)
-
+            #process unknown location, delete minlist, got a new 'maybe' list.
             for i in range(9):
                 for j in range(9):
-                    if (len(self.HintMatrixList[i][j])==1):
-                        self.RowMinList[i].append(self.HintMatrixList[i][j][0])
-                        self.ColMinList[j].append(self.HintMatrixList[i][j][0])
-                        self.CubMinList[int(i/3)][int(j/3)].append(self.HintMatrixList[i][j][0])
-
-            for i in range(9):
-                for j in range(9):
-                    if (len(self.HintMatrixList[i][j])>1):
+                    if len(self.HintMatrixList[i][j]) > 1:
                         self.HintMatrixList[i][j] = list(set(self.HintMatrixList[i][j]) - set(self.RowMinList[i]) - set(self.ColMinList[j]) -set(self.CubMinList[int(i/3)][int(j/3)]))
+
+
+            self.HintMatrixListOr = [[[] for i in range(9)] for j in range(9)]
 
             #ROW/Col/Cub
             for i in range(9):
@@ -283,40 +240,35 @@ class sudoku():
                     self.ColMaxList=[]
                     self.CubMaxList=[]
                     for k in range(9):
-                        if k != j:
-                            self.RowMaxList.extend(self.HintMatrixList[i][k])#list(set(self.RowRoughList) + set(self.HintMatrixList[i][k]))
-                        if k != i:
-                            self.ColMaxList.extend(self.HintMatrixList[k][j])#list(set(self.ColRoughList) + set(self.HintMatrixList[k][j]))
-                        if (int(k/3) != int(i%3)) or (int(k%3) != int(j%3)):
-                            self.CubMaxList.extend(self.HintMatrixList[int(i/3)*3+int(k/3)][int(j/3)*3+int(k%3)])#list(set(self.CubRoughList) + set(self.HintMatrixList[int(i/3)*3+int(k/3)][int(j/3)*3+int(k%3)]))
+                        if k != j:#other location in the same row
+                            self.RowMaxList.extend(self.HintMatrixList[i][k])
+                        if k != i:#other location in the same column
+                            self.ColMaxList.extend(self.HintMatrixList[k][j])
+                        if (int(k/3) != int(i%3)) or (int(k%3) != int(j%3)):#other location in the same 3*3cubic
+                            self.CubMaxList.extend(self.HintMatrixList[int(i/3)*3+int(k/3)][int(j/3)*3+int(k%3)])
+                    for member in self.CUBIC:
+                        if member not in self.RowMaxList or member not in self.ColMaxList or member not in  self.CubMaxList:
+                            self.HintMatrixListOr[i][j].append(member)
 
-                    for k in self.CUBIC:
-                        if k not in self.RowMaxList or k not in self.ColMaxList or k not in self.CubMaxList:
-                            self.HintMatrixList[i][j] = []
-                            self.HintMatrixList[i][j].append(k)
-
-            if dbg_on == 2:
-                print(self.HintMatrixListPre)
-                print(self.HintMatrixList)
+            #process unkown location, delete maxlist, got a new 'shouldbe' list.
+            for i in range(9):
+                for j in range(9):
+                    if len(self.HintMatrixList[i][j]) > 1 and self.HintMatrixListOr[i][j]:
+                        for k in self.HintMatrixList[i][j]:
+                            if k not in self.HintMatrixListOr[i][j]:
+                                self.HintMatrixList[i][j] = list(set(self.HintMatrixList[i][j]) - set([k]))
 
             for i in range(9):
                 for j in range(9):
-                    if set(self.HintMatrixListPre[i][j]) > set(self.HintMatrixList[i][j]):
-                        reloop = 1
+                    for member in self.HintMatrixListPre[i][j]:
+                        if member not in self.HintMatrixList[i][j]:
+                            nextloop = 1
 
-        if dbg_on == 2:
-            print(">>>>>>>>>> 2222222222 print length now!")
-            for i in range(9):
-                sys.stdout.write("|")
-                for j in range(9):
-                    sys.stdout.write(" %d "%(len(self.HintMatrixList[i][j])))
-                sys.stdout.write("|\n")
 
         for i in range(9):
             for j in range(9):
                 if ( len(self.HintMatrixList[i][j]) > 1):
                     return 1
-
         return 0
 
 
@@ -327,6 +279,7 @@ class Box:
         self.color = color
         self.textcolor = textcolor
         self.ind = ind
+
     def render(self, surface):
         x, y = self.topleft
         pygame.draw.rect(surface, self.color, (x, y, box_size, box_size))
@@ -394,15 +347,14 @@ def draw_box(sdk):
 
             box = Box((x, y), text, color, textcolor, ind)
             box.render(screen)
+            x += box_size + box_gap
             if j%3 == 2:
-                x += box_size + box_gap2
-            else:
-                x += box_size + box_gap
+                x += (box_gap2-box_gap)
         x = left_of_screen + box_gap2
+        y += box_size + box_gap
         if i%3 == 2:
-            y += box_size + box_gap2
-        else:
-            y += box_size + box_gap
+            y += (box_gap2-box_gap)
+
 
 def draw_title(ttype):
     global timer
@@ -472,25 +424,30 @@ def update_value(value):
 
 def guess_value(value):
     global board
-    if value==board[y_loc][x_loc]:
-        board[y_loc][x_loc]=0
-    elif board[y_loc][x_loc]==0:
+    if not board[y_loc][x_loc]:
         board[y_loc][x_loc]=value
+    elif value==board[y_loc][x_loc]:
+        board[y_loc][x_loc]=0
     else:
         tmp_str = str(board[y_loc][x_loc])
         tmp_str_list=[]
+
         for i in tmp_str:
             tmp_str_list.append(int(i))
-        if tmp_str_list.count(value)==0:
+
+        if not tmp_str_list.count(value):
             tmp_str_list.append(value)
         else:
-            while(tmp_str_list.count(value) > 0):
+
+            while tmp_str_list.count(value):
                 tmp_str_index = tmp_str_list.index(value)
                 del tmp_str_list[tmp_str_index]
+
         tmp_str_list.sort()
         str_value=''
         for i in tmp_str_list:
             str_value='%s%d'%(str_value, i)
+
         board[y_loc][x_loc]=int(str_value)
 
 
@@ -539,6 +496,8 @@ def main(sdk):
     global run
     global timer
 
+    nexttime=0
+    currtime=0
     one_ms_cnt=0
     one_sec_cnt=0
     one_min_cnt=0
@@ -555,46 +514,33 @@ def main(sdk):
 
     draw_box(sdk)
     draw_title(0)
-    #timer_add()
 
+    currtime=time.time()
     while True:
+        if not gameover:
+            nexttime=time.time()
+        deltatime=nexttime-currtime
 
-        if one_ms_cnt<999:
-            one_ms_cnt+=1
-        else:
-            one_ms_cnt=0
+        if int(deltatime):
+            currtime=nexttime
+            one_sec_cnt += 1
+            one_min_cnt += int(one_sec_cnt/60)
+            one_hour_cnt += int(one_min_cnt/60)
+            one_sec_cnt = one_sec_cnt%60
+            one_min_cnt = one_min_cnt%60
+            one_hour_cnt = one_hour_cnt%60
 
-        if one_sec_cnt<59:
-            if one_ms_cnt==999:
-                one_sec_cnt+=1
-                #print('second add %d'%one_sec_cnt)
-        else:
-            one_sec_cnt=0
+            if one_hour_cnt==59:
+                print("time up! game over!")
+                gameover=1
 
-        if one_min_cnt<59:
-            if one_sec_cnt==59 and one_ms_cnt==999:
-                one_min_cnt+=1
-        else:
-            one_min_cnt=0
-
-        if one_hour_cnt<59:
-            if one_min_cnt==59 and one_sec_cnt==59 and one_ms_cnt==999:
-                one_hour_cnt+=1
-        else:
-            #one_hour_cnt=0
-            print("time up! game over!")
-            gameover=1
-
-        timer='%02d:%02d:%02d'%(one_hour_cnt,one_min_cnt,one_sec_cnt)
-
-        if curr_timer != timer:
+            timer='%02d:%02d:%02d'%(one_hour_cnt,one_min_cnt,one_sec_cnt)
             draw_title(1)
             curr_timer=deepcopy(timer)
 
         for event in pygame.event.get():
             if event.type == QUIT or (event.type == KEYUP and event.key == K_ESCAPE):
                 write_best(best)
-                #run=0
                 pygame.quit()
                 exit()
                 return 0
@@ -605,25 +551,18 @@ def main(sdk):
                     if (y_loc*9+x_loc) not in sdk.HintList:
                         update_value(update_value_dict[event.key])
                         print('update value')
-                    else:
-                        print('hint given! no change!')
                 elif event.type == KEYUP and event.key in guess_value_dict:
                     if (y_loc*9+x_loc) not in sdk.HintList:
                         guess_value(guess_value_dict[event.key])
                         print('add guess value')
-                    else:
-                        print('hint given! no change!')
                 elif event.type == KEYUP and event.key == K_DELETE:
                     if (y_loc*9+x_loc) not in sdk.HintList:
                         board[y_loc][x_loc]=0
-                    else:
-                        print('hint given! no change!')
                 elif event.type == KEYUP and event.key == K_F2:
                     for i in range(9):
                         for j in range(9):
                             board[i][j] = sdk.RandMatrix[i][j]
-
-                if curr_board != board or curr_status != (x_loc, y_loc, check_mode):#newx_loc != x_loc or newy_loc != y_loc or check_mode != pre_check_mode:
+                if curr_board != board or curr_status != (x_loc, y_loc, check_mode):
                     curr_board = deepcopy(board)
                     curr_status = (x_loc, y_loc, check_mode)
                     draw_box(sdk)
@@ -642,10 +581,10 @@ def main(sdk):
         pygame.display.update()
 
 if __name__ == "__main__":
-    sdk = sudoku(1)
+    sdk = sudoku()
     continue_run=1
     while continue_run:
         continue_run=main(sdk)
-        if continue_run==1:
+        if continue_run:
              screen.blit(write("Loading ...", height = 40, color = FORESTGREEN), (left_of_screen, screen_height // 2+120))
              pygame.display.update()
