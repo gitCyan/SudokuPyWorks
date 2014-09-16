@@ -12,12 +12,8 @@ import time
 '''global parameter define
 '''
 timer='00:00:00'
-run=0
 board = [[0 for i in range(9)] for i in range(9)]
-x_loc = 4
-y_loc = 4
-check_mode=0
-
+(x_loc, y_loc, check_mode) = (4, 4, 0)
 update_value_dict = {K_1:1, K_2:2, K_3:3, K_4:4, K_5:5, K_6:6, K_7:7, K_8:8, K_9:9}
 guess_value_dict = {K_KP1:1, K_KP2:2, K_KP3:3, K_KP4:4, K_KP5:5, K_KP6:6, K_KP7:7, K_KP8:8, K_KP9:9}
 move_dict = {K_UP   :{'delta_x':0, 'delta_y':8, 'delta_chk':0},
@@ -267,7 +263,7 @@ class sudoku():
 
         for i in range(9):
             for j in range(9):
-                if ( len(self.HintMatrixList[i][j]) > 1):
+                if len(self.HintMatrixList[i][j]) > 1:
                     return 1
         return 0
 
@@ -357,8 +353,7 @@ def draw_box(sdk):
 
 
 def draw_title(ttype):
-    global timer
-    title_dict = {0:{'ttype':'text', 'tname':'SUDOKU', 'theight':40, 'tcolor': (81,205,71),        'tpos':(left_of_screen, left_of_screen//2+15)},
+    title_dict = {0:{'ttype':'text', 'tname':'SUDOKU', 'theight':40, 'tcolor': (81,205,71),'tpos':(left_of_screen, left_of_screen//2+15)},
                   1:{'ttype':'text', 'tname':'START',  'theight':14, 'tcolor': FORESTGREEN, 'tpos':(left_of_screen+205, left_of_screen//2+5)},
                   2:{'ttype':'text', 'tname':'DONE',   'theight':14, 'tcolor': FORESTGREEN, 'tpos':(left_of_screen+275, left_of_screen//2+5)},
                   3:{'ttype':'text', 'tname':'TIMER',  'theight':14, 'tcolor': FORESTGREEN, 'tpos':(left_of_screen+355, left_of_screen//2+5)},
@@ -392,20 +387,13 @@ def draw_title(ttype):
     screen.blit(write("Use LEFT, RIGHT, UP, DOWN", height=16, color=GRAY), (left_of_screen, screen_height - bottom_of_screen))
 
 def init_board(sdk):
-    sdk.iniMatrix()
     global board
-    global x_loc,y_loc,check_mode
-    check_mode=check_mode%2
-    x_loc = x_loc%9
-    y_loc = y_loc%9
-    for i in range(9):
-        for j in range(9):
-            board[i][j] = sdk.HintMatrix[i][j]
+    sdk.iniMatrix()
+    board = deepcopy(sdk.HintMatrix)
+
 
 def move(value):
-    global x_loc
-    global y_loc
-    global check_mode
+    global x_loc, y_loc, check_mode
     print('MOVE BEFORE,x_loc is %d-----y_loc is %d'%(x_loc, y_loc))
     x_loc+=value['delta_x']
     y_loc+=value['delta_y']
@@ -415,15 +403,18 @@ def move(value):
     check_mode=check_mode%2
     print('MOVE AFTER,x_loc is %d-----y_loc is %d'%(x_loc, y_loc))
 
+
 def update_value(value):
     global board
-    if value==board[y_loc][x_loc]:
+    print('update value')
+    if value==board[y_loc][x_loc]:#del
         board[y_loc][x_loc]=0
-    else:
+    else:#add
         board[y_loc][x_loc]=value
 
 def guess_value(value):
     global board
+    print('add guess value')
     if not board[y_loc][x_loc]:
         board[y_loc][x_loc]=value
     elif value==board[y_loc][x_loc]:
@@ -435,9 +426,9 @@ def guess_value(value):
         for i in tmp_str:
             tmp_str_list.append(int(i))
 
-        if not tmp_str_list.count(value):
+        if not tmp_str_list.count(value):#add
             tmp_str_list.append(value)
-        else:
+        else:#del
 
             while tmp_str_list.count(value):
                 tmp_str_index = tmp_str_list.index(value)
@@ -458,18 +449,16 @@ def write(msg="pygame is cool", color= BLACK, height = 14):
     return mytext
 
 def is_over(sdk):
-    global score,best
-    '''if board != final matrix
-    '''
-    for i in range(9):
-        for j in range(9):
-            if board[i][j] != sdk.RandMatrix[i][j]:
-                return False
-    tmp_str=''
-    for i in str(timer):
-        if i != ':' and i != '-':
-            tmp_str='%s%s'%(tmp_str, i)
-    score=int(tmp_str)
+    global score, best
+    if board != sdk.RandMatrix:
+        return False
+
+    score = int(timer.split(':')[0])<<4 + int(timer.split(':')[1])<<2 + int(timer.split(':')[2])
+
+    print(timer)
+    print()
+    print('%06d'%score)
+
     if score<best:
         best=score
     return True
@@ -491,100 +480,92 @@ def write_best(best):
     except IOError:
         pass
 
+def QuitGame():
+    write_best(best)
+    pygame.quit()
+    exit()
+    return 0
+
 def main(sdk):
-    global score
-    global run
-    global timer
+    global board, timer
 
-    nexttime=0
-    currtime=0
-    one_ms_cnt=0
-    one_sec_cnt=0
-    one_min_cnt=0
-    one_hour_cnt=0
-    timer='%02d:%02d:%02d'%(one_hour_cnt,one_min_cnt,one_sec_cnt)
-    #timer='--:--:--'
-    screen.blit(background, (0, 0))
     init_board(sdk)
-    gameover = is_over(sdk)
-
-    curr_board = deepcopy(board)
-    curr_timer = deepcopy(timer)
-    curr_status =(x_loc, y_loc, check_mode)
-
+    screen.blit(background, (0, 0))
     draw_box(sdk)
     draw_title(0)
 
-    currtime=time.time()
+    curr_board = deepcopy(board)
+    curr_status = (x_loc, y_loc, check_mode)
+
+    nexttime = currtime = time.time()
+    (one_hour_cnt, one_min_cnt, one_sec_cnt) = (0, 0, 0)
+
+    gameover = is_over(sdk)
+
     while True:
         if not gameover:
-            nexttime=time.time()
-        deltatime=nexttime-currtime
+            nexttime = time.time()
 
-        if int(deltatime):
-            currtime=nexttime
+
+        if int(nexttime - currtime):#timer add 1 second
+            currtime = nexttime
             one_sec_cnt += 1
             one_min_cnt += int(one_sec_cnt/60)
             one_hour_cnt += int(one_min_cnt/60)
-            one_sec_cnt = one_sec_cnt%60
-            one_min_cnt = one_min_cnt%60
-            one_hour_cnt = one_hour_cnt%60
+            (one_hour_cnt, one_min_cnt, one_sec_cnt) = (one_hour_cnt%60, one_min_cnt%60, one_sec_cnt%60)
 
-            if one_hour_cnt==59:
+            if one_hour_cnt == 59:
                 print("time up! game over!")
-                gameover=1
+                gameover = 1
 
-            timer='%02d:%02d:%02d'%(one_hour_cnt,one_min_cnt,one_sec_cnt)
+            timer = '%02d:%02d:%02d'%(one_hour_cnt,one_min_cnt,one_sec_cnt)
             draw_title(1)
-            curr_timer=deepcopy(timer)
 
-        for event in pygame.event.get():
-            if event.type == QUIT or (event.type == KEYUP and event.key == K_ESCAPE):
-                write_best(best)
-                pygame.quit()
-                exit()
-                return 0
-            elif not gameover:
-                if event.type == KEYUP and event.key in move_dict:
+        if not gameover:
+            gameover = is_over(sdk)
+            for event in pygame.event.get():
+                if event.type == QUIT or (event.type == KEYUP and event.key == K_ESCAPE):
+                    return (QuitGame())
+                elif event.type == KEYUP and event.key == K_F2:#show the final board
+                    board = deepcopy(sdk.RandMatrix)
+                elif event.type == KEYUP and event.key in move_dict:#movement
                     move(move_dict[event.key])
-                elif event.type == KEYUP and event.key in update_value_dict:
+                elif event.type == KEYUP and event.key in update_value_dict:#input numbers
                     if (y_loc*9+x_loc) not in sdk.HintList:
                         update_value(update_value_dict[event.key])
-                        print('update value')
-                elif event.type == KEYUP and event.key in guess_value_dict:
+                elif event.type == KEYUP and event.key in guess_value_dict:#input guess numbers
                     if (y_loc*9+x_loc) not in sdk.HintList:
                         guess_value(guess_value_dict[event.key])
-                        print('add guess value')
                 elif event.type == KEYUP and event.key == K_DELETE:
                     if (y_loc*9+x_loc) not in sdk.HintList:
                         board[y_loc][x_loc]=0
-                elif event.type == KEYUP and event.key == K_F2:
-                    for i in range(9):
-                        for j in range(9):
-                            board[i][j] = sdk.RandMatrix[i][j]
+
+                #step2: check display board status, decide whether need to update display or not
                 if curr_board != board or curr_status != (x_loc, y_loc, check_mode):
                     curr_board = deepcopy(board)
                     curr_status = (x_loc, y_loc, check_mode)
                     draw_box(sdk)
-                gameover = is_over(sdk)
-            else:
-                write_best(best)
+        else:
+            write_best(best)
 
-                screen.blit(write("Game Win!", height = 40, color = FORESTGREEN), (left_of_screen, screen_height // 2))
-                screen.blit(write("Press C to Continue,", height = 40, color = FORESTGREEN), (left_of_screen, screen_height // 2+40))
-                screen.blit(write("          Q to Quit.", height = 40, color = FORESTGREEN), (left_of_screen, screen_height // 2+80))
-                if event.type == KEYUP and event.key == K_c:
-                    screen.blit(write("Loading ...", height = 40, color = FORESTGREEN), (left_of_screen, screen_height // 2+120))
-                    run=1
-                    gameover=0
+            screen.blit(write("Game Win!", height = 40, color = FORESTGREEN), (left_of_screen, screen_height // 4))
+            screen.blit(write("        Press C to Continue,", height = 40, color = FORESTGREEN), (left_of_screen, screen_height // 4+80))
+            screen.blit(write("                     Q to Quit.", height = 40, color = FORESTGREEN), (left_of_screen, screen_height // 4+120))
+            for event in pygame.event.get():
+                if event.type == QUIT or (event.type == KEYUP and (event.key == K_ESCAPE or event.key == K_q)):
+                    return (QuitGame())
+                elif event.type == KEYUP and event.key == K_c:
                     return 1
+
         pygame.display.update()
 
 if __name__ == "__main__":
     sdk = sudoku()
-    continue_run=1
-    while continue_run:
-        continue_run=main(sdk)
-        if continue_run:
-             screen.blit(write("Loading ...", height = 40, color = FORESTGREEN), (left_of_screen, screen_height // 2+120))
-             pygame.display.update()
+    while main(sdk):
+        screen.blit(background, (0, 0))
+        screen.blit(write("Loading ...", height = 40, color = FORESTGREEN), (left_of_screen, screen_height // 4+160))
+        pygame.display.update()
+        a=time.time()
+        b=a
+        while int(b-a)<1:
+            b=time.time()
